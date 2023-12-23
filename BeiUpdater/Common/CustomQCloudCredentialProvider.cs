@@ -73,10 +73,10 @@ namespace BeiUpdater.Common
 
     public class Credentials
     {
-        public string Token { get; set; }
+        public string? Token { get; set; }
 
-        public string TmpSecretId { get; set; }
+        public string? TmpSecretId { get; set; }
 
-        public string TmpSecretKey { get; set; }
+        public string? TmpSecretKey { get; set; }
     }
 }

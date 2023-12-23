@@ -1,4 +1,4 @@
-﻿#define DEBUG 1
+﻿#define DEBUG
 
 using System.Text.Encodings.Web;
 using System.Text.Json;
@@ -131,6 +131,8 @@ namespace BeiUpdater.Common
         public Account Account { get; set; }
 
         public Bucket Bucket { get; set; }
+
+        public int CdnWaitUpdateSeconds { get; set; }
     }
 
     public class Bucket

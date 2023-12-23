@@ -23,7 +23,7 @@
         /// <summary>
         /// 
         /// </summary>
-        public string Enddate { get; set; }
+        public string? Enddate { get; set; }
 
         /// <summary>
         /// 
@@ -83,7 +83,7 @@
         /// <summary>
         /// 
         /// </summary>
-        public List<string> Hs { get; set; }
+        public List<string>? Hs { get; set; }
     }
 
 

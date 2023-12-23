@@ -1,1 +1,7 @@
+.vs/*
+
+BeiUpdater/bin/*
+BeiUpdater/obj/*
+BeiUpdater/Properties/*
+
 BeiUpdater/appsettings.Development.json
