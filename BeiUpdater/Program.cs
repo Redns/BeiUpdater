@@ -64,9 +64,7 @@ namespace BeiUpdater
                             $"[ERROR] {e.Message}\n" +
                             $"{e.StackTrace}\n" +
                             "-------Error Stack End------- ";
-            await new Email(emailSender, emailReceiver, 
-                            emailTitle, emailBody,
-                            notification.Sender.AccessCode, false).SendAsync();
+            await new Email(emailSender, emailReceiver, emailTitle, emailBody, notification.Sender.AccessCode, false).SendAsync();
         }
 
 
@@ -88,7 +86,10 @@ namespace BeiUpdater
                             notification.Sender.AccessCode, true).SendAsync();
         }
 
-
+        /// <summary>
+        /// 初始化应用
+        /// </summary>
+        /// <param name="appSetting"></param>
         private static void Init(AppSetting appSetting)
         {
             var cosXml = CosHelper.InitTencentCosSdk(appSetting.TencentCloud);
@@ -98,8 +99,6 @@ namespace BeiUpdater
                 AutoReset = true,
                 Interval = GetTimerInterval(appSetting.Trigger.TimeSpan)
             };
-
-            // 初始化定时器事件
             imageUpdateTimer.Elapsed += async (s, e) =>
             {
                 await BeiUpdateAsync(appSetting, imageUpdateTimer, cosXml, imageCdnUrl);
@@ -107,6 +106,11 @@ namespace BeiUpdater
             imageUpdateTimer.Start();
         }
 
+        /// <summary>
+        /// 获取触发间隔
+        /// </summary>
+        /// <param name="timeSpan"></param>
+        /// <returns></returns>
         private static double GetTimerInterval(TimeSpan timeSpan)
         {
             var todayTriggerTime = DateTime.Today.Add(timeSpan);
@@ -117,6 +121,14 @@ namespace BeiUpdater
             return (todayTriggerTime.AddDays(1) - DateTime.Now).TotalMilliseconds;
         }
 
+        /// <summary>
+        /// 更新必应每日一图
+        /// </summary>
+        /// <param name="appSetting"></param>
+        /// <param name="imageUpdateTimer"></param>
+        /// <param name="cosXml"></param>
+        /// <param name="imageCdnUrl"></param>
+        /// <returns></returns>
         private static async Task BeiUpdateAsync(AppSetting appSetting, Timer imageUpdateTimer, CosXml cosXml, string imageCdnUrl)
         {
             // 计算下次触发间隔
@@ -130,8 +142,8 @@ namespace BeiUpdater
             using var beiReadStream = await BingHelper.GetBingImageStreamAsync(appSetting.Image.BingEverydayUrl);
             if(!CosHelper.UploadImageToCOS(beiReadStream, cosXml, appSetting.TencentCloud.Bucket))
             {
-                imageUpdateTimer.Stop(); 
                 Logger.Error("图片上传至 COS 失败");
+                return;
             }
 
             CosHelper.UpdateTencentCDN(appSetting.TencentCloud, imageCdnUrl);
