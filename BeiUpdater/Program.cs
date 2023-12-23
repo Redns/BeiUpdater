@@ -145,7 +145,6 @@ namespace BeiUpdater
                 Logger.Error("图片上传至 COS 失败");
                 return;
             }
-
             CosHelper.UpdateTencentCDN(appSetting.TencentCloud, imageCdnUrl);
 
             // 更新设置
