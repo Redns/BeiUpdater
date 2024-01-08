@@ -34,7 +34,7 @@ namespace BeiUpdater
             var appSetting = AppSetting.Load();
             try
             {
-                Init(appSetting);
+                await Init(appSetting);
                 while (true)
                 {
                     Thread.Sleep(50 * 1000);
@@ -43,7 +43,7 @@ namespace BeiUpdater
             catch(Exception e)
             {
                 await SendErrorNotifyEmail(appSetting.Notification, e);
-                Logger.Error("应用已退出", e);
+                Logger.Error("Due to a critical error, the app has exited", e);
             }
         }
 
@@ -90,7 +90,7 @@ namespace BeiUpdater
         /// 初始化应用
         /// </summary>
         /// <param name="appSetting"></param>
-        private static void Init(AppSetting appSetting)
+        private static async Task Init(AppSetting appSetting)
         {
             var cosXml = CosHelper.InitTencentCosSdk(appSetting.TencentCloud);
             var imageCdnUrl = new Uri(new Uri(appSetting.Image.CdnUrl), appSetting.TencentCloud.Bucket.ImageKey).AbsoluteUri;
@@ -99,6 +99,9 @@ namespace BeiUpdater
                 AutoReset = true,
                 Interval = GetTimerInterval(appSetting.Trigger.TimeSpan)
             };
+
+            await BeiUpdateAsync(appSetting, imageUpdateTimer, cosXml, imageCdnUrl);
+
             imageUpdateTimer.Elapsed += async (s, e) =>
             {
                 await BeiUpdateAsync(appSetting, imageUpdateTimer, cosXml, imageCdnUrl);
@@ -133,33 +136,35 @@ namespace BeiUpdater
         {
             // 计算下次触发间隔
             imageUpdateTimer.Interval = GetTimerInterval(appSetting.Trigger.TimeSpan);
-            if((appSetting.Notification.LastNotifyTime is not null) && ((DateTime.Now - appSetting.Notification.LastNotifyTime).Value.Days < appSetting.Notification.IntervalDays))
-            {
-                return;
-            }
 
             // 获取 Bing 每日一图并上传至 COS
             using var beiReadStream = await BingHelper.GetBingImageStreamAsync(appSetting.Image.BingEverydayUrl);
             if(!CosHelper.UploadImageToCOS(beiReadStream, cosXml, appSetting.TencentCloud.Bucket))
             {
-                Logger.Error("图片上传至 COS 失败");
+                Logger.Error("Failed to upload image to COS");
                 return;
             }
             CosHelper.UpdateTencentCDN(appSetting.TencentCloud, imageCdnUrl);
-
-            // 更新设置
-            appSetting.Notification.LastNotifyTime = DateTime.Now;
-            appSetting.Save();
-
-            // 发送通知邮件
-            await Task.Delay(appSetting.TencentCloud.CdnWaitUpdateSeconds * 1000);
-            await SendUpdateNormalNotifyEmail(appSetting.Notification, imageCdnUrl);
 
             // 释放图片
             await beiReadStream.FlushAsync();
             await beiReadStream.DisposeAsync();
 
-            Logger.Info("图片已更新");
+            Logger.Info("Update bing everyday image successfully");
+
+            // 发送通知邮件
+            if ((appSetting.Notification.LastNotifyTime is not null) && ((DateTime.Now - appSetting.Notification.LastNotifyTime).Value.Days < appSetting.Notification.IntervalDays))
+            {
+                return;
+            }
+            await Task.Delay(appSetting.TencentCloud.CdnWaitUpdateSeconds * 1000);
+            await SendUpdateNormalNotifyEmail(appSetting.Notification, imageCdnUrl);
+
+            Logger.Info("Successfully to send notify email");
+
+            // 更新设置
+            appSetting.Notification.LastNotifyTime = DateTime.Now;
+            appSetting.Save();
         }
     }
 }
